@@ -170,6 +170,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 492924c2edc2eed45b17073a5749dd76, type: 2}
   - {fileID: 11400000, guid: e13f733fac9bbb34cab5d51660d5503f, type: 2}
   - {fileID: 11400000, guid: 414246b5aa9509c4d8d6997d50c384e2, type: 2}
+  - {fileID: 11400000, guid: c6e4f5b78f022eb438aa4f951d65d5d9, type: 2}
   currentPitch: 1
   releasePoint: {x: 0.535, y: 1.785}
   releaseExtension: 0

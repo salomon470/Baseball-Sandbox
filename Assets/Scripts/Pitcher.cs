@@ -44,10 +44,11 @@ public class Pitcher : MonoBehaviour
     }
     public void SpawnBall()
     {
-        currentPitch = Random.Range(0,2);
+        currentPitch = Random.Range(0,4);
         
-        Ball ball = Instantiate(ballPrefab, new Vector3(releasePoint.x, releasePoint.y, releaseExtension), Quaternion.identity);
-        ball.transform.forward = Vector3.forward; //temp
+        Vector3 start = new Vector3(releasePoint.x, releasePoint.y, releaseExtension);
+        Ball ball = Instantiate(ballPrefab, start, Quaternion.identity);
+        ball.transform.forward = new Vector3(0,1.9f,18.4f) - start; //temp
         ball.Initialize(1.225f, new PitchData(pitches[currentPitch].velocity / 2.237f, pitches[currentPitch].spinAxis(), pitches[currentPitch].RPM));
         Debug.Log(pitches[currentPitch].pitchName);
     }
