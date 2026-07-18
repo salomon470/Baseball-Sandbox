@@ -40,26 +40,26 @@ public class Ball : MonoBehaviour
         velocity = _pitchData.velocity * transform.forward;
     }
     
-    void Update()
+    void FixedUpdate()
     {        
         // Apply gravity
-        AddForce(mass * Physics.gravity * Time.deltaTime);
+        AddForce(mass * Physics.gravity * Time.fixedDeltaTime);
 
         // Calculate and apply lift force
-        Vector3 liftForce = GetLift() * Time.deltaTime;
+        Vector3 liftForce = GetLift() * Time.fixedDeltaTime;
         AddForce(liftForce);
 
         // Track velocity and displacement caused by lift
         Vector3 deltaVLift = liftForce / mass;
         _velocityDueToLift += deltaVLift;
-        displacementDueToLift += _velocityDueToLift * Time.deltaTime;
+        displacementDueToLift += _velocityDueToLift * Time.fixedDeltaTime;
 
         // Update position
-        transform.position += velocity * Time.deltaTime;
+        transform.position += velocity * Time.fixedDeltaTime;
 
-        AddForce(GetDrag() * Time.deltaTime);
+        AddForce(GetDrag() * Time.fixedDeltaTime);
 
-        visual.Rotate(Quaternion.LookRotation(transform.forward, Vector3.up)*pitchData.spinAxis, pitchData.RPM * 6 * Time.deltaTime, Space.World);
+        visual.Rotate(Quaternion.LookRotation(transform.forward, Vector3.up)*pitchData.spinAxis, pitchData.RPM * 6 * Time.fixedDeltaTime, Space.World);
     }
     void AddForce(Vector3 force)
     {
