@@ -17,6 +17,8 @@ public class Pitcher : MonoBehaviour
         // Tell the VideoPlayer to fire an event every time a new frame is ready
         vid.sendFrameReadyEvents = true;
         vid.frameReady += OnFrameReady;
+
+        vid.transform.position = new Vector3(vid.transform.position.x, vid.transform.position.y, releaseExtension);
     }
 
     void Update()
