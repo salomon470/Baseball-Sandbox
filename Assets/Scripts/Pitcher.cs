@@ -4,13 +4,15 @@ using UnityEngine.Video;
 public class Pitcher : MonoBehaviour
 {
     public Ball ballPrefab;
+    public GameObject sphere;
     public VideoPlayer vid;
     public PitchProfile[] pitches;
     public int currentPitch = 0;
-    public Vector2 releasePoint;
-    public float releaseExtension;
+    public Vector3 releasePoint;
     [Tooltip("Frame of vid that the ball is released")]
     public long releaseFrame;
+
+    public Vector3 location;
 
     void Start()
     {
@@ -18,7 +20,7 @@ public class Pitcher : MonoBehaviour
         vid.sendFrameReadyEvents = true;
         vid.frameReady += OnFrameReady;
 
-        vid.transform.position = new Vector3(vid.transform.position.x, vid.transform.position.y, releaseExtension);
+        vid.transform.position = new Vector3(vid.transform.position.x, vid.transform.position.y, releasePoint.z);
     }
 
     void Update()
@@ -27,6 +29,7 @@ public class Pitcher : MonoBehaviour
         {
             vid.frame = 0;
             vid.Play();
+            Calibrate();
         }
     }
 
@@ -36,6 +39,7 @@ public class Pitcher : MonoBehaviour
         if (frameIdx == releaseFrame)
         {
             SpawnBall();
+            currentPitch++;
         }
     }
 
@@ -46,12 +50,112 @@ public class Pitcher : MonoBehaviour
     }
     public void SpawnBall()
     {
-        currentPitch = Random.Range(0,4);
-        
-        Vector3 start = new Vector3(releasePoint.x, releasePoint.y, releaseExtension);
+        //currentPitch = Random.Range(0, 4);
+
+        Vector3 start = releasePoint;
         Ball ball = Instantiate(ballPrefab, start, Quaternion.identity);
-        ball.transform.forward = new Vector3(0,1.9f,18.4f) - start; //temp
+        ball.transform.forward = (location - releasePoint).normalized;
         ball.Initialize(1.225f, new PitchData(pitches[currentPitch].velocity / 2.237f, pitches[currentPitch].spinAxis(), pitches[currentPitch].RPM));
+        ball.freeze = true;
+
+        //Vector3 sim = Simulate(start, ball.transform.forward * pitches[currentPitch].velocity / 2.237f, new PitchData(pitches[currentPitch].velocity / 2.237f, pitches[currentPitch].spinAxis(), pitches[currentPitch].RPM), ball.ballType, 1.225f, 18.44f);
+        //Instantiate(sphere, sim, Quaternion.identity);
+        //Debug.Log(sim);
+
         Debug.Log(pitches[currentPitch].pitchName);
+    }
+
+    void Calibrate()
+    {
+        DebugExtensions.DrawSphere(location, 0.1f, Color.red);
+        Vector3 dir = location - releasePoint;
+
+        // 1. Convert the velocity from MPH to meters per second once
+        float speedMS = pitches[currentPitch].velocity / 2.237f;
+
+        // 2. Setup the directional velocity vector
+        Vector3 initialVelocity = dir.normalized * speedMS;
+
+        // 3. Create the intermediate PitchData struct
+        PitchData currentPitchData = new PitchData(
+            speedMS,
+            pitches[currentPitch].spinAxis(),
+            pitches[currentPitch].RPM
+        );
+
+        // 4. Clean, easily readable SimParameters instantiation
+        SimParameters parameters = new SimParameters(
+            releasePoint,
+            initialVelocity,
+            currentPitchData,
+            ballPrefab.ballType,
+            1.225f,
+            18.44f
+        );
+
+        Vector3 err = Vector3.zero;
+
+        // Define an array of colors matching your loop size
+        Color[] iterationColors = new Color[] { Color.green, Color.yellow, Color.blue, Color.pink };
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 sim = Simulate(parameters);
+            sim.z = location.z;
+
+            // Grab the color based on the current loop index
+            Color sphereColor = iterationColors[i];
+            DebugExtensions.DrawSphere(sim, 0.1f, sphereColor);
+
+            err = location - sim;
+            Debug.Log($"Iteration {i} Error: {err}");
+
+            dir += err;
+            parameters.initialVel = dir * speedMS;
+        }
+    }
+
+    public struct SimParameters
+    {
+        public Vector3 startPos;
+        public Vector3 initialVel;
+        public PitchData pitchData;
+        public BallType ballType;
+        public float airDensity;
+        public float targetZ;
+
+        // Constructor to quickly build the struct in one line
+        public SimParameters(Vector3 _startPos, Vector3 _initialVel, PitchData _pitchData, BallType _ballType, float _airDensity, float _targetZ = 18.44f)
+        {
+            startPos = _startPos;
+            initialVel = _initialVel;
+            pitchData = _pitchData;
+            ballType = _ballType;
+            airDensity = _airDensity;
+            targetZ = _targetZ;
+        }
+    }
+    static Vector3 Simulate(SimParameters config)
+    {
+        Vector3 pos = config.startPos;
+        Vector3 vel = config.initialVel;
+        Vector3 initialForward = config.initialVel.normalized;
+
+        while (pos.z < config.targetZ)
+        {
+            // Apply gravity
+            vel += Physics.gravity * Time.fixedDeltaTime;
+
+            // Calculate and apply lift force
+            Vector3 liftForce = BallPhysics.CalculateLift(vel, config.pitchData, config.ballType, config.airDensity, initialForward);
+            vel += liftForce / config.ballType.mass * Time.fixedDeltaTime;
+
+            // Update position
+            pos += vel * Time.fixedDeltaTime;
+
+            vel += BallPhysics.CalculateDrag(vel, config.ballType, config.airDensity) * Time.fixedDeltaTime / config.ballType.mass;
+        }
+
+        return pos;
     }
 }
