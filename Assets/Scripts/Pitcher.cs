@@ -4,7 +4,6 @@ using UnityEngine.Video;
 public class Pitcher : MonoBehaviour
 {
     public Ball ballPrefab;
-    public GameObject sphere;
     public VideoPlayer vid;
     public PitchProfile[] pitches;
     public int currentPitch = 0;
@@ -13,6 +12,7 @@ public class Pitcher : MonoBehaviour
     public long releaseFrame;
 
     public Vector3 location;
+    public Transform target;
 
     void Start()
     {
@@ -25,11 +25,12 @@ public class Pitcher : MonoBehaviour
 
     void Update()
     {
+        location = target.position;
+        
         if (Input.GetKeyDown(KeyCode.Space))
         {
             vid.frame = 0;
             vid.Play();
-            Calibrate();
         }
     }
 
@@ -39,7 +40,6 @@ public class Pitcher : MonoBehaviour
         if (frameIdx == releaseFrame)
         {
             SpawnBall();
-            currentPitch++;
         }
     }
 
@@ -50,38 +50,36 @@ public class Pitcher : MonoBehaviour
     }
     public void SpawnBall()
     {
-        //currentPitch = Random.Range(0, 4);
-
         Vector3 start = releasePoint;
-        Ball ball = Instantiate(ballPrefab, start, Quaternion.identity);
-        ball.transform.forward = (location - releasePoint).normalized;
-        ball.Initialize(1.225f, new PitchData(pitches[currentPitch].velocity / 2.237f, pitches[currentPitch].spinAxis(), pitches[currentPitch].RPM));
-        ball.freeze = true;
+        PitchData currentPitchData = new PitchData(
+            pitches[currentPitch].velocity / 2.237f,
+            pitches[currentPitch].spinAxis(),
+            pitches[currentPitch].RPM
+        );
 
-        //Vector3 sim = Simulate(start, ball.transform.forward * pitches[currentPitch].velocity / 2.237f, new PitchData(pitches[currentPitch].velocity / 2.237f, pitches[currentPitch].spinAxis(), pitches[currentPitch].RPM), ball.ballType, 1.225f, 18.44f);
-        //Instantiate(sphere, sim, Quaternion.identity);
-        //Debug.Log(sim);
+        Ball ball = Instantiate(ballPrefab, start, Quaternion.identity);
+
+        ball.transform.forward = Calibrate(currentPitchData);
+        
+        ball.Initialize(1.225f, currentPitchData);
+        ball.freeze = true;
 
         Debug.Log(pitches[currentPitch].pitchName);
     }
 
-    void Calibrate()
+    Vector3 Calibrate(PitchData _pData)
     {
         DebugExtensions.DrawSphere(location, 0.1f, Color.red);
         Vector3 dir = location - releasePoint;
 
         // 1. Convert the velocity from MPH to meters per second once
-        float speedMS = pitches[currentPitch].velocity / 2.237f;
+        float speedMS = _pData.velocity;
 
         // 2. Setup the directional velocity vector
         Vector3 initialVelocity = dir.normalized * speedMS;
 
         // 3. Create the intermediate PitchData struct
-        PitchData currentPitchData = new PitchData(
-            speedMS,
-            pitches[currentPitch].spinAxis(),
-            pitches[currentPitch].RPM
-        );
+        PitchData currentPitchData = _pData;
 
         // 4. Clean, easily readable SimParameters instantiation
         SimParameters parameters = new SimParameters(
@@ -90,29 +88,36 @@ public class Pitcher : MonoBehaviour
             currentPitchData,
             ballPrefab.ballType,
             1.225f,
-            18.44f
+            location.z
         );
 
         Vector3 err = Vector3.zero;
 
         // Define an array of colors matching your loop size
-        Color[] iterationColors = new Color[] { Color.green, Color.yellow, Color.blue, Color.pink };
+        Color[] iterationColors = new Color[] { Color.green, Color.yellow, Color.pink };
+        
+        //Iteration 0
+        Vector3 sim = Simulate(parameters);
+        sim.z = location.z;
 
-        for (int i = 0; i < 4; i++)
+        //Iteration 1+
+        for (int i = 0; i < 3; i++)
         {
-            Vector3 sim = Simulate(parameters);
-            sim.z = location.z;
-
-            // Grab the color based on the current loop index
-            Color sphereColor = iterationColors[i];
-            DebugExtensions.DrawSphere(sim, 0.1f, sphereColor);
-
             err = location - sim;
-            Debug.Log($"Iteration {i} Error: {err}");
+            Debug.Log($"Iteration {i+1} Error: {err}");
 
             dir += err;
-            parameters.initialVel = dir * speedMS;
+            parameters.initialVel = dir.normalized * speedMS;
+
+            sim = Simulate(parameters);
+            sim.z = location.z;
+            
+            // Grab the color based on the current loop index
+            Color sphereColor = iterationColors[i];
+            DebugExtensions.DrawSphere(sim, 0.05f, sphereColor, 4f);
         }
+
+        return dir;
     }
 
     public struct SimParameters
