@@ -6,13 +6,16 @@ public class Pitcher : MonoBehaviour
     public Ball ballPrefab;
     public VideoPlayer vid;
     public PitchProfile[] pitches;
-    public int currentPitch = 0;
+    public int currentPitch = -1;
     public Vector3 releasePoint;
     [Tooltip("Frame of vid that the ball is released")]
     public long releaseFrame;
 
     public Vector3 location;
     public Transform target;
+    public bool IsBallInAir { get; private set; } = false;
+    public bool IsWindup = false;
+    Ball activeBall;
 
     void Start()
     {
@@ -26,12 +29,37 @@ public class Pitcher : MonoBehaviour
     void Update()
     {
         location = target.position;
-        
+
+        /*
         if (Input.GetKeyDown(KeyCode.Space))
         {
             vid.frame = 0;
             vid.Play();
+        } */
+
+        // --- TRACK ACTIVE BALL ---
+        // If the ball was in the air, but it has crossed home plate (location.z) or been destroyed
+        if (IsBallInAir)
+        {
+            if (activeBall == null || activeBall.transform.position.z >= location.z + 1)
+            {
+                IsBallInAir = false;
+                Destroy(activeBall.gameObject);
+                activeBall = null; // Clear reference
+                //Debug.Log("Ball is no longer in the air.");
+            }
         }
+        else
+        {
+            currentPitch = -1;
+        }
+    }
+
+    public void Pitch()
+    {
+        vid.frame = 0;
+        vid.Play();
+        IsWindup = true;
     }
 
     // This only runs ONCE per video frame, completely separate from your game's Update FPS
@@ -48,8 +76,10 @@ public class Pitcher : MonoBehaviour
         // Clean up the event listener when the object is destroyed
         vid.frameReady -= OnFrameReady;
     }
+
     public void SpawnBall()
     {
+        currentPitch = Random.Range(0,2);
         Vector3 start = releasePoint;
         PitchData currentPitchData = new PitchData(
             pitches[currentPitch].velocity / 2.237f,
@@ -57,12 +87,15 @@ public class Pitcher : MonoBehaviour
             pitches[currentPitch].RPM
         );
 
-        Ball ball = Instantiate(ballPrefab, start, Quaternion.identity);
+        // Store the reference to the instantiated ball
+        activeBall = Instantiate(ballPrefab, start, Quaternion.identity);
 
-        ball.transform.forward = Calibrate(currentPitchData);
-        
-        ball.Initialize(1.225f, currentPitchData);
-        ball.freeze = true;
+        activeBall.transform.forward = Calibrate(currentPitchData);
+        activeBall.Initialize(1.225f, currentPitchData);
+
+        // --- SET STATE FLAG ---
+        IsBallInAir = true;
+        IsWindup = false;
 
         Debug.Log(pitches[currentPitch].pitchName);
     }
@@ -95,7 +128,7 @@ public class Pitcher : MonoBehaviour
 
         // Define an array of colors matching your loop size
         Color[] iterationColors = new Color[] { Color.green, Color.yellow, Color.pink };
-        
+
         //Iteration 0
         Vector3 sim = Simulate(parameters);
         sim.z = location.z;
@@ -104,14 +137,14 @@ public class Pitcher : MonoBehaviour
         for (int i = 0; i < 3; i++)
         {
             err = location - sim;
-            Debug.Log($"Iteration {i+1} Error: {err}");
+            //Debug.Log($"Iteration {i + 1} Error: {err}");
 
             dir += err;
             parameters.initialVel = dir.normalized * speedMS;
 
             sim = Simulate(parameters);
             sim.z = location.z;
-            
+
             // Grab the color based on the current loop index
             Color sphereColor = iterationColors[i];
             DebugExtensions.DrawSphere(sim, 0.05f, sphereColor, 4f);
