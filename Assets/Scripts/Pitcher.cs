@@ -14,6 +14,7 @@ public class Pitcher : MonoBehaviour
     public Vector3 location;
     public Transform target;
     public bool IsBallInAir { get; private set; } = false;
+    public float airTime = 0f;
     public bool IsWindup = false;
     Ball activeBall;
 
@@ -48,10 +49,12 @@ public class Pitcher : MonoBehaviour
                 activeBall = null; // Clear reference
                 //Debug.Log("Ball is no longer in the air.");
             }
+            airTime+=Time.deltaTime;
         }
         else
         {
             currentPitch = -1;
+            airTime = 0;
         }
     }
 

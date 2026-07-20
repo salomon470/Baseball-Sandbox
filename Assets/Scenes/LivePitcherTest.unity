@@ -307,6 +307,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Baseball Field
       objectReference: {fileID: 0}
+    - target: {fileID: 6710752456023703175, guid: 2e83fa4101fb3514ea4d85ed4c1d268b, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7897314876599655359, guid: 2e83fa4101fb3514ea4d85ed4c1d268b, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.25
@@ -603,7 +607,7 @@ Transform:
   m_GameObject: {fileID: 746137891}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.16, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -628,10 +632,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 492924c2edc2eed45b17073a5749dd76, type: 2}
   - {fileID: 11400000, guid: 414246b5aa9509c4d8d6997d50c384e2, type: 2}
   currentPitch: 0
-  releasePoint: {x: 0.535, y: 1.785, z: 0}
+  releasePoint: {x: 0.695, y: 1.785, z: 0}
   releaseFrame: 124
   location: {x: 0, y: 1, z: 18.44}
   target: {fileID: 727856318}
+  airTime: 0
   IsWindup: 0
 --- !u!1 &1014479937
 GameObject:

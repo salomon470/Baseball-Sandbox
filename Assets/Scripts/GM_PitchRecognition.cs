@@ -9,6 +9,7 @@ public class GM_PitchRecognition : MonoBehaviour
 
     bool pitching = false;
     int guess = -1;
+    float guessTime = 0f;
     int prevPitch = -1;
 
     void Start()
@@ -41,7 +42,7 @@ public class GM_PitchRecognition : MonoBehaviour
                             if (digit <= pitcher.pitches.Length)
                             {
                                 guess = digit;
-                                Debug.Log(guess);
+                                guessTime = pitcher.airTime;
                                 break;
                             }
                         }
@@ -67,7 +68,7 @@ public class GM_PitchRecognition : MonoBehaviour
         {
             if (guess == prevPitch)
             {
-                Debug.Log("Correct");
+                Debug.Log("Correct: " + guessTime);
             }
             else
             {
