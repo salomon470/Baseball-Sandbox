@@ -53,7 +53,6 @@ public class Pitcher : MonoBehaviour
         }
         else
         {
-            currentPitch = -1;
             airTime = 0;
         }
     }
@@ -82,7 +81,6 @@ public class Pitcher : MonoBehaviour
 
     public void SpawnBall()
     {
-        currentPitch = Random.Range(0,2);
         Vector3 start = releasePoint;
         PitchData currentPitchData = new PitchData(
             pitches[currentPitch].velocity / 2.237f,
