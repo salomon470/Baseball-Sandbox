@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Video;
+using System;
 
 public class Pitcher : MonoBehaviour
 {
@@ -13,55 +14,34 @@ public class Pitcher : MonoBehaviour
 
     public Vector3 location;
     public Transform target;
-    public bool IsBallInAir { get; private set; } = false;
-    public float airTime = 0f;
-    public bool IsWindup = false;
-    Ball activeBall;
+
+    public event Action OnPitchReleased; //data or profile??
 
     void Start()
+    {
+        vid.transform.position = new Vector3(vid.transform.position.x, vid.transform.position.y, releasePoint.z);
+    }
+    void OnEnable()
     {
         // Tell the VideoPlayer to fire an event every time a new frame is ready
         vid.sendFrameReadyEvents = true;
         vid.frameReady += OnFrameReady;
-
-        vid.transform.position = new Vector3(vid.transform.position.x, vid.transform.position.y, releasePoint.z);
+    }
+    void OnDisable()
+    {
+        // Clean up the event listener when the object is destroyed
+        vid.frameReady -= OnFrameReady;
     }
 
     void Update()
     {
-        location = target.position;
 
-        /*
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            vid.frame = 0;
-            vid.Play();
-        } */
-
-        // --- TRACK ACTIVE BALL ---
-        // If the ball was in the air, but it has crossed home plate (location.z) or been destroyed
-        if (IsBallInAir)
-        {
-            if (activeBall == null || activeBall.transform.position.z >= location.z + 1)
-            {
-                IsBallInAir = false;
-                Destroy(activeBall.gameObject);
-                activeBall = null; // Clear reference
-                //Debug.Log("Ball is no longer in the air.");
-            }
-            airTime+=Time.deltaTime;
-        }
-        else
-        {
-            airTime = 0;
-        }
     }
 
     public void Pitch()
     {
         vid.frame = 0;
         vid.Play();
-        IsWindup = true;
     }
 
     // This only runs ONCE per video frame, completely separate from your game's Update FPS
@@ -71,12 +51,6 @@ public class Pitcher : MonoBehaviour
         {
             SpawnBall();
         }
-    }
-
-    void OnDestroy()
-    {
-        // Clean up the event listener when the object is destroyed
-        vid.frameReady -= OnFrameReady;
     }
 
     public void SpawnBall()
@@ -89,16 +63,14 @@ public class Pitcher : MonoBehaviour
         );
 
         // Store the reference to the instantiated ball
-        activeBall = Instantiate(ballPrefab, start, Quaternion.identity);
+        Ball ball = Instantiate(ballPrefab, start, Quaternion.identity);
 
-        activeBall.transform.forward = Calibrate(currentPitchData);
-        activeBall.Initialize(1.225f, currentPitchData);
-
-        // --- SET STATE FLAG ---
-        IsBallInAir = true;
-        IsWindup = false;
+        ball.transform.forward = Calibrate(currentPitchData);
+        ball.Initialize(1.225f, currentPitchData);
 
         Debug.Log(pitches[currentPitch].pitchName);
+
+        OnPitchReleased?.Invoke();
     }
 
     Vector3 Calibrate(PitchData _pData)

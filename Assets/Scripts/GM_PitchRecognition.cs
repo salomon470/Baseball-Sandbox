@@ -1,32 +1,89 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using TMPro;
 
-public class GM_PitchRecognition : MonoBehaviour
+public class GM_PitchRecognition : MonoBehaviour, IGameMode
 {
     public Pitcher pitcher;
-    int pitches = 1;
+    bool isLive = false;
+    float timeSinceRelease = 0;
 
-    bool pitching = false;
-    int guess = -1;
-    float guessTime = 0f;
-    int prevPitch = -1;
-
-    void Start()
+    public struct PitchGuess
     {
-        pitches = pitcher.pitches.Length;
-        foreach (PitchProfile profile in pitcher.pitches)
+        public int SelectedPitch;   // The pitch digit they guessed
+        public float ReactionTime;  // How many seconds into the pitch they guessed
+        public bool IsCorrect;      // Was it right?
+
+        public PitchGuess(int selectedPitch = -1, float reactionTime = 0f, bool isCorrect = false)
         {
-            //display sum shit
+            SelectedPitch = selectedPitch;
+            ReactionTime = reactionTime;
+            IsCorrect = isCorrect;
         }
+    }
+    List<PitchGuess> guesses = new List<PitchGuess>();
+
+    // 1. ALL EVENT SUBSCRIPTIONS GO HERE
+    void OnEnable()
+    {
+        Ball.OnPlateCrossed += EndRound;
+        pitcher.OnPitchReleased += PitchReleased;
+    }
+
+    // 2. ALWAYS CLEAN UP HERE
+    void OnDisable()
+    {
+        Ball.OnPlateCrossed -= EndRound;
+        pitcher.OnPitchReleased -= PitchReleased;
+    }
+    public void Initialize()
+    {
+        throw new System.NotImplementedException();
+    }
+    public void StartRound()
+    {
+        guesses.Add(new PitchGuess(-1,0f,false));
+        timeSinceRelease = 0f;
+
+        //pick random pitch?
+        pitcher.Pitch();
+        Debug.Log("Round Start");
+    }
+
+    public void PitchReleased()
+    {
+        Debug.Log("PitchReleased");
+        isLive = true;
+    }
+
+    private void SubmitGuess(int _guess, float _time)
+    {
+        var lastGuess = guesses[^1];
+        lastGuess.SelectedPitch = _guess;
+        lastGuess.IsCorrect = (_guess == pitcher.currentPitch + 1);
+        lastGuess.ReactionTime = _time;
+        guesses[^1] = lastGuess;
+    }
+
+    public void EndRound()
+    {
+        //Show results
+        isLive = false;
+
+        Debug.Log($"{guesses[^1].IsCorrect} | Reaction Time: {guesses[^1].ReactionTime}s");
+    }
+    public void Cleanup()
+    {
+        throw new System.NotImplementedException();
     }
 
     void Update()
     {
-        if (pitcher.IsBallInAir && pitching && guess == -1)
+        if (isLive)
         {
-            prevPitch = pitcher.currentPitch + 1;
-            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
+            timeSinceRelease += Time.deltaTime;
+            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame && guesses[^1].SelectedPitch == -1)
             {
                 // Find the key that was triggered this frame
                 foreach (var key in Keyboard.current.allKeys)
@@ -41,8 +98,7 @@ public class GM_PitchRecognition : MonoBehaviour
                         {
                             if (digit <= pitcher.pitches.Length)
                             {
-                                guess = digit;
-                                guessTime = pitcher.airTime;
+                                SubmitGuess(digit, timeSinceRelease);
                                 break;
                             }
                         }
@@ -50,41 +106,5 @@ public class GM_PitchRecognition : MonoBehaviour
                 }
             }
         }
-
-        // 2. EVALUATE GUESS (Only when the pitch is active, but the ball has just landed)
-        if (pitching && !pitcher.IsWindup && !pitcher.IsBallInAir)
-        {
-            // This block runs EXACTLY ONCE the frame the ball disappears/crosses the plate
-            OnGuess();
-        }
-
-        if (guess == -1)
-            pitching = pitcher.IsBallInAir || pitcher.IsWindup;
-    }
-
-    void OnGuess()
-    {
-        if (prevPitch != -1)
-        {
-            if (guess == prevPitch)
-            {
-                Debug.Log("Correct: " + guessTime);
-            }
-            else
-            {
-                Debug.Log("Wrong");
-            }
-        }
-        pitching = false;
-        guess = -1;
-        prevPitch = -1;
-    }
-
-    public void NextPitch()
-    {
-        if (pitching)
-            return;
-
-        pitcher.Pitch();
     }
 }

@@ -21,6 +21,7 @@ public class Ball : MonoBehaviour
     public Vector3 velocity = Vector3.zero;
     float mass = 0.141748f;
     float radius = 0.037f;
+    bool isPitchCompelted = false;
 
     public float airDensity = 1.225f;
     public PitchData pitchData;
@@ -31,6 +32,8 @@ public class Ball : MonoBehaviour
     [NonSerialized] public Vector3 displacementDueToLift = Vector3.zero;
     private Vector3 _velocityDueToLift = Vector3.zero;
     public float reynoldsNumber;
+
+    public static event Action OnPlateCrossed;
 
     public void Initialize(float _aidDensity, PitchData _pitchData)
     {
@@ -67,6 +70,12 @@ public class Ball : MonoBehaviour
         AddForce(BallPhysics.CalculateDrag(velocity,ballType,airDensity) * Time.fixedDeltaTime);
 
         visual.Rotate(Quaternion.LookRotation(transform.forward, Vector3.up)*pitchData.spinAxis, pitchData.RPM * 6 * Time.fixedDeltaTime, Space.World);
+
+        if(transform.position.z >= 18.44f && !isPitchCompelted)
+        {
+            isPitchCompelted = true;
+            OnPlateCrossed?.Invoke();
+        }
     }
     void AddForce(Vector3 force)
     {
