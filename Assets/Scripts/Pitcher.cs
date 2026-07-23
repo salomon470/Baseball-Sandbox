@@ -55,6 +55,8 @@ public class Pitcher : MonoBehaviour
 
     public void SpawnBall()
     {
+        location = target.position;
+        
         Vector3 start = releasePoint;
         PitchData currentPitchData = new PitchData(
             pitches[currentPitch].velocity / 2.237f,
